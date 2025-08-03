@@ -483,13 +483,15 @@
         class QueueSystem {
             constructor() {
                 this.apiUrl = 'https://688d806da459d5566b127728.mockapi.io/v1/Queue';
+                this.refreshInterval = 10000; // 10 seconds instead of 5
+                this.lastDataHash = '';
                 this.queueData = [];
                 this.filteredData = [];
                 this.isSearchActive = false;
                 
                 this.initializeElements();
                 this.setupEventListeners();
-                this.loadData(); // Load once on startup
+                this.startAutoRefresh();
             }
 
             initializeElements() {
@@ -534,8 +536,7 @@
 
             async loadData() {
                 try {
-                    console.log('🔄 Loading data from API...');
-                    this.updateConnectionStatus('checking', 'Loading...');
+                    this.updateConnectionStatus('checking', 'Checking...');
                     
                     const response = await fetch(this.apiUrl, {
                         method: 'GET',
@@ -549,33 +550,58 @@
                     }
                     
                     const data = await response.json();
-                    console.log('📦 Raw API data:', data);
+                    const dataHash = JSON.stringify(data);
                     
-                    // Extract counters from nested structure
-                    this.queueData = [];
-                    if (Array.isArray(data)) {
-                        data.forEach(item => {
-                            if (item.counters && Array.isArray(item.counters)) {
-                                this.queueData.push(...item.counters);
-                            }
-                        });
+                    // Only update if data has actually changed
+                    if (dataHash !== this.lastDataHash) {
+                        console.log('📊 Data updated - refreshing display');
+                        this.lastDataHash = dataHash;
+                        
+                        // Extract counters from nested structure
+                        this.queueData = [];
+                        if (Array.isArray(data)) {
+                            data.forEach(item => {
+                                if (item.counters && Array.isArray(item.counters)) {
+                                    this.queueData.push(...item.counters);
+                                }
+                            });
+                        }
+                        
+                        // Preserve search if active
+                        if (this.isSearchActive) {
+                            this.filterCounters(this.searchInput.value);
+                        } else {
+                            this.filteredData = [...this.queueData];
+                        }
+                        
+                        this.hideError();
+                        this.updateCounterCount();
+                        this.renderCounters();
                     }
                     
-                    console.log('✅ Processed counters:', this.queueData);
-                    
-                    this.filteredData = [...this.queueData];
-                    this.hideError();
                     this.updateConnectionStatus('connected', 'Live');
-                    this.updateCounterCount();
-                    this.renderCounters();
                     
                 } catch (error) {
                     console.error('❌ Error loading data:', error);
                     this.updateConnectionStatus('error', 'Connection error');
-                    this.showError(`Failed to load data: ${error.message}`);
+                    
+                    // Only show error if we don't have any data yet
+                    if (this.queueData.length === 0) {
+                        this.showError(`Failed to load data: ${error.message}`);
+                    }
                 } finally {
                     this.loadingMessage.style.display = 'none';
                 }
+            }
+
+            startAutoRefresh() {
+                // Initial load
+                this.loadData();
+                
+                // Set up smart auto-refresh
+                setInterval(() => {
+                    this.loadData();
+                }, this.refreshInterval);
             }
 
             filterCounters(searchTerm) {
@@ -630,8 +656,6 @@
             }
 
             renderCounters() {
-                console.log('🎨 Rendering', this.filteredData.length, 'counters');
-                
                 if (this.filteredData.length === 0) {
                     if (this.queueData.length === 0) {
                         this.countersContainer.innerHTML = `
@@ -655,9 +679,23 @@
                     return;
                 }
 
-                this.countersContainer.innerHTML = this.filteredData.map(counter => {
+                // Store previous values to detect changes
+                const existingCards = this.countersContainer.querySelectorAll('.counter-card');
+                const previousValues = new Map();
+                existingCards.forEach((card, index) => {
+                    const numberEl = card.querySelector('.current-number');
+                    if (numberEl) {
+                        previousValues.set(index, numberEl.textContent);
+                    }
+                });
+
+                this.countersContainer.innerHTML = this.filteredData.map((counter, index) => {
                     const counterName = counter.name || 'Unknown';
                     const currentServing = counter.currentServing || '--';
+                    
+                    // Check if this counter's value changed
+                    const wasUpdated = previousValues.has(index) && 
+                                     previousValues.get(index) !== String(currentServing);
                     
                     // Highlight search term
                     const searchTerm = this.searchInput.value.trim();
@@ -670,7 +708,7 @@
                     return `
                         <div class="counter-card fade-in">
                             <div class="counter-name">${displayName}</div>
-                            <div class="current-number">${currentServing}</div>
+                            <div class="current-number ${wasUpdated ? 'number-update' : ''}">${currentServing}</div>
                             <div class="current-label">Currently Serving</div>
                         </div>
                     `;
