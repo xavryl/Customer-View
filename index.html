@@ -1,0 +1,715 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Queue Management System</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 8px;
+            overflow-x: hidden;
+        }
+
+        @media (max-width: 480px) {
+            body {
+                padding: 5px;
+            }
+        }
+
+        .container {
+            max-width: 100%;
+            margin: 0 auto;
+        }
+
+        .header {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            padding: 16px;
+            margin-bottom: 16px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        @media (max-width: 480px) {
+            .header {
+                padding: 12px;
+                margin-bottom: 12px;
+                border-radius: 12px;
+            }
+        }
+
+        .header-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .header h1 {
+            color: #333;
+            font-size: 22px;
+            font-weight: 700;
+            flex: 1;
+        }
+
+        @media (max-width: 480px) {
+            .header h1 {
+                font-size: 18px;
+            }
+        }
+
+        @media (max-width: 360px) {
+            .header h1 {
+                font-size: 16px;
+            }
+        }
+
+        .search-toggle {
+            background: none;
+            border: none;
+            font-size: 18px;
+            cursor: pointer;
+            padding: 12px;
+            border-radius: 50%;
+            transition: all 0.3s ease;
+            color: #667eea;
+            min-width: 44px;
+            min-height: 44px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        @media (max-width: 480px) {
+            .search-toggle {
+                font-size: 16px;
+                padding: 10px;
+                min-width: 40px;
+                min-height: 40px;
+            }
+        }
+
+        .search-toggle:hover {
+            background: rgba(102, 126, 234, 0.1);
+            transform: scale(1.1);
+        }
+
+        .search-container {
+            position: relative;
+            overflow: hidden;
+            max-height: 0;
+            transition: all 0.3s ease;
+            opacity: 0;
+        }
+
+        .search-container.active {
+            max-height: 80px;
+            opacity: 1;
+            margin-bottom: 15px;
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 14px 18px;
+            border: 2px solid #e0e0e0;
+            border-radius: 25px;
+            font-size: 16px;
+            outline: none;
+            transition: all 0.3s ease;
+        }
+
+        .search-input:focus {
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .search-input::placeholder {
+            color: #999;
+            font-style: italic;
+        }
+
+        @media (max-width: 480px) {
+            .search-input {
+                padding: 12px 16px;
+                font-size: 16px; /* Prevent zoom on iOS */
+                border-radius: 20px;
+            }
+        }
+
+        .status-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 13px;
+            color: #666;
+            gap: 8px;
+        }
+
+        @media (max-width: 480px) {
+            .status-bar {
+                font-size: 12px;
+                flex-wrap: wrap;
+                gap: 6px;
+            }
+        }
+
+        @media (max-width: 360px) {
+            .status-bar {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 4px;
+            }
+        }
+
+        .connection-status {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #4CAF50;
+            animation: pulse 2s infinite;
+        }
+
+        .status-dot.checking {
+            background: #FFC107;
+        }
+
+        .status-dot.error {
+            background: #F44336;
+            animation: none;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+
+        .counters-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 12px;
+        }
+
+        @media (min-width: 400px) {
+            .counters-grid {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 14px;
+            }
+        }
+
+        @media (min-width: 768px) {
+            .counters-grid {
+                grid-template-columns: repeat(3, 1fr);
+                gap: 16px;
+            }
+        }
+
+        @media (min-width: 1024px) {
+            .counters-grid {
+                grid-template-columns: repeat(4, 1fr);
+                gap: 18px;
+            }
+        }
+
+        @media (min-width: 1200px) {
+            .counters-grid {
+                grid-template-columns: repeat(5, 1fr);
+                gap: 20px;
+            }
+        }
+
+        .counter-card {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 16px;
+            padding: 20px 16px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+            text-align: center;
+            min-height: 140px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        @media (max-width: 480px) {
+            .counter-card {
+                border-radius: 12px;
+                padding: 16px 12px;
+                min-height: 120px;
+            }
+        }
+
+        @media (max-width: 360px) {
+            .counter-card {
+                padding: 14px 10px;
+                min-height: 110px;
+            }
+        }
+
+        .counter-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, #667eea, #764ba2);
+        }
+
+        .counter-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15);
+        }
+
+        .counter-name {
+            font-size: 14px;
+            font-weight: 600;
+            color: #666;
+            margin-bottom: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            word-break: break-word;
+            line-height: 1.2;
+        }
+
+        @media (max-width: 480px) {
+            .counter-name {
+                font-size: 12px;
+                margin-bottom: 10px;
+                letter-spacing: 0.3px;
+            }
+        }
+
+        @media (max-width: 360px) {
+            .counter-name {
+                font-size: 11px;
+                margin-bottom: 8px;
+            }
+        }
+
+        .current-number {
+            font-size: 36px;
+            font-weight: 800;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 8px;
+            line-height: 1;
+            word-break: break-all;
+        }
+
+        @media (max-width: 480px) {
+            .current-number {
+                font-size: 28px;
+                margin-bottom: 6px;
+            }
+        }
+
+        @media (max-width: 360px) {
+            .current-number {
+                font-size: 24px;
+                margin-bottom: 5px;
+            }
+        }
+
+        .current-label {
+            font-size: 12px;
+            color: #888;
+            font-weight: 500;
+        }
+
+        @media (max-width: 480px) {
+            .current-label {
+                font-size: 11px;
+            }
+        }
+
+        @media (max-width: 360px) {
+            .current-label {
+                font-size: 10px;
+            }
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: white;
+            font-size: 16px;
+        }
+
+        .error {
+            background: rgba(255, 107, 107, 0.9);
+            color: white;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .no-results {
+            text-align: center;
+            padding: 40px;
+            color: rgba(255, 255, 255, 0.8);
+            font-size: 16px;
+            grid-column: 1 / -1;
+        }
+
+        .fade-in {
+            animation: fadeIn 0.5s ease-in;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .number-update {
+            animation: numberChange 0.6s ease-out;
+        }
+
+        @keyframes numberChange {
+            0% { transform: scale(1.2); opacity: 0.7; }
+            50% { transform: scale(1.1); opacity: 0.9; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
+        /* Touch improvements for mobile */
+        @media (hover: none) and (pointer: coarse) {
+            .counter-card:hover {
+                transform: none;
+                box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            }
+            
+            .counter-card:active {
+                transform: scale(0.98);
+                transition: transform 0.1s ease;
+            }
+            
+            .search-toggle:hover {
+                background: none;
+                transform: none;
+            }
+            
+            .search-toggle:active {
+                background: rgba(102, 126, 234, 0.2);
+                transform: scale(0.95);
+            }
+        }
+
+        /* Prevent horizontal scroll on very small screens */
+        @media (max-width: 320px) {
+            .container {
+                max-width: 100%;
+                overflow-x: hidden;
+            }
+            
+            .header h1 {
+                font-size: 14px;
+            }
+            
+            .counter-card {
+                min-height: 100px;
+                padding: 12px 8px;
+            }
+            
+            .current-number {
+                font-size: 20px;
+            }
+        }
+
+        /* Smooth scrolling for better mobile experience */
+        html {
+            scroll-behavior: smooth;
+        }
+
+        /* Prevent text selection on interactive elements */
+        .search-toggle, .counter-card {
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="header-top">
+                <h1>Queue System</h1>
+                <button class="search-toggle" id="searchToggle">🔍</button>
+            </div>
+            
+            <div class="search-container" id="searchContainer">
+                <input type="text" class="search-input" id="searchInput" placeholder="Search by counter name...">
+            </div>
+            
+            <div class="status-bar">
+                <span id="counterCount">Loading...</span>
+                <div class="connection-status">
+                    <span class="status-dot" id="statusDot"></span>
+                    <span id="connectionStatus">Connecting...</span>
+                </div>
+            </div>
+        </div>
+
+        <div id="errorMessage" class="error" style="display: none;"></div>
+        <div id="loadingMessage" class="loading">Loading queue data...</div>
+        <div id="countersContainer" class="counters-grid"></div>
+    </div>
+
+    <script>
+        class QueueSystem {
+            constructor() {
+                this.apiUrl = 'https://688d806da459d5566b127728.mockapi.io/v1/Queue';
+                this.queueData = [];
+                this.filteredData = [];
+                this.isSearchActive = false;
+                
+                this.initializeElements();
+                this.setupEventListeners();
+                this.loadData(); // Load once on startup
+            }
+
+            initializeElements() {
+                this.searchToggle = document.getElementById('searchToggle');
+                this.searchContainer = document.getElementById('searchContainer');
+                this.searchInput = document.getElementById('searchInput');
+                this.counterCount = document.getElementById('counterCount');
+                this.connectionStatus = document.getElementById('connectionStatus');
+                this.statusDot = document.getElementById('statusDot');
+                this.errorMessage = document.getElementById('errorMessage');
+                this.loadingMessage = document.getElementById('loadingMessage');
+                this.countersContainer = document.getElementById('countersContainer');
+            }
+
+            setupEventListeners() {
+                console.log('Setting up event listeners...');
+                
+                this.searchToggle.addEventListener('click', () => {
+                    console.log('🔍 Search toggle clicked');
+                    this.toggleSearch();
+                });
+
+                this.searchInput.addEventListener('input', (e) => {
+                    console.log('📝 Search input:', e.target.value);
+                    this.filterCounters(e.target.value);
+                });
+
+                document.addEventListener('click', (e) => {
+                    if (this.isSearchActive && 
+                        !this.searchContainer.contains(e.target) && 
+                        !this.searchToggle.contains(e.target)) {
+                        this.closeSearch();
+                    }
+                });
+
+                document.addEventListener('keydown', (e) => {
+                    if (e.key === 'Escape' && this.isSearchActive) {
+                        this.closeSearch();
+                    }
+                });
+            }
+
+            async loadData() {
+                try {
+                    console.log('🔄 Loading data from API...');
+                    this.updateConnectionStatus('checking', 'Loading...');
+                    
+                    const response = await fetch(this.apiUrl, {
+                        method: 'GET',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        }
+                    });
+                    
+                    if (!response.ok) {
+                        throw new Error(`HTTP ${response.status}`);
+                    }
+                    
+                    const data = await response.json();
+                    console.log('📦 Raw API data:', data);
+                    
+                    // Extract counters from nested structure
+                    this.queueData = [];
+                    if (Array.isArray(data)) {
+                        data.forEach(item => {
+                            if (item.counters && Array.isArray(item.counters)) {
+                                this.queueData.push(...item.counters);
+                            }
+                        });
+                    }
+                    
+                    console.log('✅ Processed counters:', this.queueData);
+                    
+                    this.filteredData = [...this.queueData];
+                    this.hideError();
+                    this.updateConnectionStatus('connected', 'Live');
+                    this.updateCounterCount();
+                    this.renderCounters();
+                    
+                } catch (error) {
+                    console.error('❌ Error loading data:', error);
+                    this.updateConnectionStatus('error', 'Connection error');
+                    this.showError(`Failed to load data: ${error.message}`);
+                } finally {
+                    this.loadingMessage.style.display = 'none';
+                }
+            }
+
+            filterCounters(searchTerm) {
+                console.log('🔍 Filtering counters for term:', searchTerm);
+                console.log('📊 Available counters:', this.queueData.map(c => c.name));
+                
+                const term = searchTerm.toLowerCase().trim();
+                
+                if (!term) {
+                    console.log('✅ Empty search - showing all counters');
+                    this.filteredData = [...this.queueData];
+                } else {
+                    console.log('🔎 Searching for:', term);
+                    this.filteredData = this.queueData.filter(counter => {
+                        const name = String(counter.name || '').toLowerCase();
+                        const match = name.includes(term);
+                        console.log(`  "${counter.name}" -> includes "${term}"? ${match}`);
+                        return match;
+                    });
+                }
+                
+                console.log('🎯 Filter results:', this.filteredData.length, 'matches:', this.filteredData.map(c => c.name));
+                this.updateCounterCount();
+                this.renderCounters();
+            }
+
+            toggleSearch() {
+                if (this.isSearchActive) {
+                    this.closeSearch();
+                } else {
+                    this.openSearch();
+                }
+            }
+
+            openSearch() {
+                console.log('🔓 Opening search');
+                this.isSearchActive = true;
+                this.searchContainer.classList.add('active');
+                this.searchToggle.textContent = '✕';
+                setTimeout(() => {
+                    this.searchInput.focus();
+                }, 300);
+            }
+
+            closeSearch() {
+                console.log('🔒 Closing search');
+                this.isSearchActive = false;
+                this.searchContainer.classList.remove('active');
+                this.searchToggle.textContent = '🔍';
+                this.searchInput.value = '';
+                this.filterCounters('');
+            }
+
+            renderCounters() {
+                console.log('🎨 Rendering', this.filteredData.length, 'counters');
+                
+                if (this.filteredData.length === 0) {
+                    if (this.queueData.length === 0) {
+                        this.countersContainer.innerHTML = `
+                            <div class="no-results">
+                                <div style="font-size: 48px; margin-bottom: 16px;">📊</div>
+                                <div>No queue data available</div>
+                            </div>
+                        `;
+                    } else {
+                        const searchTerm = this.searchInput.value.trim();
+                        this.countersContainer.innerHTML = `
+                            <div class="no-results">
+                                <div style="font-size: 48px; margin-bottom: 16px;">🔍</div>
+                                <div>No counters found for "${searchTerm}"</div>
+                                <div style="font-size: 12px; color: rgba(255,255,255,0.6); margin-top: 8px;">
+                                    Available: ${this.queueData.map(c => `"${c.name}"`).join(', ')}
+                                </div>
+                            </div>
+                        `;
+                    }
+                    return;
+                }
+
+                this.countersContainer.innerHTML = this.filteredData.map(counter => {
+                    const counterName = counter.name || 'Unknown';
+                    const currentServing = counter.currentServing || '--';
+                    
+                    // Highlight search term
+                    const searchTerm = this.searchInput.value.trim();
+                    let displayName = counterName;
+                    if (searchTerm && counterName.toLowerCase().includes(searchTerm.toLowerCase())) {
+                        const regex = new RegExp(`(${searchTerm})`, 'gi');
+                        displayName = counterName.replace(regex, '<mark style="background: rgba(102,126,234,0.3); padding: 1px 3px; border-radius: 3px;">$1</mark>');
+                    }
+                    
+                    return `
+                        <div class="counter-card fade-in">
+                            <div class="counter-name">${displayName}</div>
+                            <div class="current-number">${currentServing}</div>
+                            <div class="current-label">Currently Serving</div>
+                        </div>
+                    `;
+                }).join('');
+            }
+
+            updateCounterCount() {
+                const total = this.queueData.length;
+                const showing = this.filteredData.length;
+                
+                if (total === 0) {
+                    this.counterCount.textContent = 'No counters';
+                } else if (showing === total) {
+                    this.counterCount.textContent = `${total} counter${total !== 1 ? 's' : ''}`;
+                } else {
+                    this.counterCount.textContent = `${showing} of ${total} counter${total !== 1 ? 's' : ''}`;
+                }
+            }
+
+            updateConnectionStatus(status, message) {
+                this.connectionStatus.textContent = message;
+                this.statusDot.className = `status-dot ${status}`;
+            }
+
+            showError(message) {
+                this.errorMessage.textContent = message;
+                this.errorMessage.style.display = 'block';
+            }
+
+            hideError() {
+                this.errorMessage.style.display = 'none';
+            }
+        }
+
+        // Initialize when page loads
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log('🚀 Starting Queue System...');
+            new QueueSystem();
+        });
+    </script>
+</body>
+</html>
